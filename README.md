@@ -76,5 +76,127 @@ FROM MedicalRecords
 GROUP BY PatientID
 HAVING COUNT(*) > 1;
 
+-- total number of patients admitted each month
+SELECT 
+    DATE_FORMAT(date_of_admission, '%Y-%m') AS month,
+    COUNT(patient_id) AS total_admissions
+FROM admissions
+GROUP BY month
+ORDER BY month;
+
+-- month with the highest admissions.
+SELECT 
+    DATE_FORMAT(date_of_admission, '%Y-%m') AS month,
+    COUNT(patient_id) AS total_admissions
+FROM admissions
+GROUP BY month
+ORDER BY total_admissions DESC
+LIMIT 1;
+
+-- average length of stay per patient.
+SELECT 
+    patient_id,
+    AVG(DATEDIFF(discharge_date, date_of_admission)) AS avg_stay_days
+FROM admissions
+WHERE discharge_date IS NOT NULL
+GROUP BY patient_id;
+
+-- number of patients still admitted.
+SELECT COUNT(*) AS currently_admitted
+FROM admissions
+WHERE discharge_date IS NULL;
+
+-- average number of patients admitted per doctor each month.
+SELECT 
+    doctor,
+    DATE_FORMAT(date_of_admission, '%Y-%m') AS month,
+    COUNT(patient_id) / COUNT(DISTINCT DATE_FORMAT(date_of_admission, '%Y-%m')) AS avg_patients_per_month
+FROM admissions
+GROUP BY doctor, month;
+
+-- hospital with the highest number of admissions in the last 6 months.
+SELECT 
+    hospital,
+    COUNT(patient_id) AS total_admissions
+FROM admissions
+WHERE date_of_admission >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+GROUP BY hospital
+ORDER BY total_admissions DESC
+LIMIT 1;
+
+-- average billing amount per hospital per quarter.
+SELECT 
+    hospital,
+    QUARTER(date_of_admission) AS quarter,
+    AVG(billing_amount) AS avg_billing
+FROM billing
+JOIN admissions USING(patient_id)
+GROUP BY hospital, quarter;
+
+-- doctors who admitted more than 50 patients in a single year.
+SELECT 
+    doctor,
+    YEAR(date_of_admission) AS year,
+    COUNT(patient_id) AS total_patients
+FROM admissions
+GROUP BY doctor, year
+HAVING total_patients > 50;
+
+-- monthly total billing amount covered by each insurance provider.
+SELECT 
+    insurance_provider,
+    DATE_FORMAT(date_of_admission, '%Y-%m') AS month,
+    SUM(billing_amount) AS total_billing
+FROM billing
+JOIN admissions USING(patient_id)
+GROUP BY insurance_provider, month
+ORDER BY month;
+
+-- insurance provider with the highest claim settlement in the last year.
+SELECT 
+    insurance_provider,
+    SUM(billing_amount) AS total_claims
+FROM billing
+JOIN admissions USING(patient_id)
+WHERE YEAR(date_of_admission) = YEAR(CURDATE()) - 1
+GROUP BY insurance_provider
+ORDER BY total_claims DESC
+LIMIT 1;
+
+-- average billing amount trend over time (month by month).
+SELECT 
+    DATE_FORMAT(date_of_admission, '%Y-%m') AS month,
+    AVG(billing_amount) AS avg_billing
+FROM billing
+JOIN admissions USING(patient_id)
+GROUP BY month
+ORDER BY month;
+
+-- patients whose billing amounts increased in every admission compared to the last.
+SELECT patient_id
+FROM (
+    SELECT 
+        patient_id,
+        billing_amount,
+        LAG(billing_amount) OVER (PARTITION BY patient_id ORDER BY date_of_admission) AS prev_bill
+    FROM billing
+    JOIN admissions USING(patient_id)
+) t
+WHERE prev_bill IS NOT NULL
+GROUP BY patient_id
+HAVING MIN(billing_amount > prev_bill) = 1;
+
+-- medical condition with the fastest growing admission trend year-over-year.
+SELECT 
+    medical_condition,
+    (COUNT(CASE WHEN YEAR(date_of_admission) = YEAR(CURDATE()) - 1 THEN patient_id END)) AS last_year,
+    (COUNT(CASE WHEN YEAR(date_of_admission) = YEAR(CURDATE()) THEN patient_id END)) AS this_year,
+    ((COUNT(CASE WHEN YEAR(date_of_admission) = YEAR(CURDATE()) THEN patient_id END)) -
+     (COUNT(CASE WHEN YEAR(date_of_admission) = YEAR(CURDATE()) - 1 THEN patient_id END))) AS growth
+FROM admissions
+GROUP BY medical_condition
+ORDER BY growth DESC
+LIMIT 1;
+
 
 
