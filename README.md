@@ -1,5 +1,15 @@
-# Hospital-dataset-SQL
-SQL 
+Healthcare Analytics with SQL — Business Intelligence Case Study
+
+Executive Summary:
+This repository contains a healthcare analytics solution developed using SQL (MySQL) and Tableau. The project focuses on extracting actionable insights from patient, hospital, and insurance datasets to support business decisions in hospital management and healthcare operations.
+
+Business Objectives
+Improve patient care operations through data-driven insights
+Identify revenue drivers across hospitals, doctors, and insurance providers
+Track patient churn, readmission risk, and insurance coverage gaps
+Support management in optimizing billing, admissions, and room utilization
+
+
 
 -- number of patients admitted in the hospital
 SELECT COUNT(*) AS TotalPatients
@@ -59,12 +69,12 @@ JOIN Billing b ON d.PatientID = b.PatientID
 GROUP BY d.DoctorName
 ORDER BY TotalBilling DESC
 LIMIT 1;
+
 -- detect duplicate patient admission records
 SELECT PatientID, COUNT(*) AS CountRecords
 FROM MedicalRecords
 GROUP BY PatientID
 HAVING COUNT(*) > 1;
-
 
 
 
